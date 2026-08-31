@@ -47,7 +47,7 @@ INSTRUCCIONES = {
         "funct7": 0b0000000
     },
 
-        "addi": {
+    "addi": {
         "formato": "I",
         "tipo": "aritmetica",
         "opcode": 0b0010011,
@@ -72,6 +72,18 @@ INSTRUCCIONES = {
         "formato": "I",
         "tipo": "carga",
         "opcode": 0b0000011,
+        "funct3": 0b000
+    },
+
+    "sw": {
+        "formato": "S",
+        "opcode": 0b0100011,
+        "funct3": 0b010
+    },
+
+    "sb": {
+        "formato": "S",
+        "opcode": 0b0100011,
         "funct3": 0b000
     }
     
@@ -253,6 +265,46 @@ def encode_instruction(instruction: str) -> int:
 
             return word
 
+    if info["formato"] == "S":
+
+        if len(partes) < 3:
+            raise ValueError(
+                f"Formato inválido para {mnemonico}. "
+                f"Use: {mnemonico} rs2, offset(rs1)"
+            )
+
+        # En un store, el primer registro es rs2.
+        rs2 = parse_register(partes[1])
+
+        # Permite formatos como:
+        # sw x8, -4(x2)
+        # sw x8, -4( x2 )
+        operando_memoria = "".join(partes[2:])
+
+        imm, rs1 = parse_memory_operand(operando_memoria)
+
+        opcode = info["opcode"]
+        funct3 = info["funct3"]
+
+        # Representación del inmediato en complemento a 2 de 12 bits.
+        imm_bits = encode_immediate(imm, 12)
+
+        # Separar los 12 bits del inmediato.
+        imm_4_0 = imm_bits & 0b11111
+        imm_11_5 = (imm_bits >> 5) & 0b1111111
+
+        word = (
+            (imm_11_5 << 25)
+            | (rs2 << 20)
+            | (rs1 << 15)
+            | (funct3 << 12)
+            | (imm_4_0 << 7)
+            | opcode
+        )
+
+        return word
+
+    
     raise NotImplementedError(
         f"Formato {info['formato']} todavía no implementado"
     )
@@ -379,6 +431,62 @@ opcode: identifica la categoría principal de la instrucción.
     """
 
             return explicacion.strip()
+
+    if info["formato"] == "S":
+
+        rs2 = parse_register(partes[1])
+
+        operando_memoria = "".join(partes[2:])
+        imm, rs1 = parse_memory_operand(operando_memoria)
+
+        opcode = info["opcode"]
+        funct3 = info["funct3"]
+
+        imm_bits = encode_immediate(imm, 12)
+
+        imm_4_0 = imm_bits & 0b11111
+        imm_11_5 = (imm_bits >> 5) & 0b1111111
+
+        binario_completo = f"{word:032b}"
+
+        explicacion = f"""
+Instrucción: {instruction}
+Formato: S
+
+Bits:
+31      25 24   20 19   15 14 12 11    7 6       0
+{imm_11_5:07b}   {rs2:05b}   {rs1:05b}   {funct3:03b}   {imm_4_0:05b}   {opcode:07b}
+imm[11:5]  rs2     rs1    funct3 imm[4:0] opcode
+
+Campos:
+imm[11:5] [31:25] = {imm_11_5:07b}
+rs2       [24:20] = x{rs2} = {rs2:05b}
+rs1       [19:15] = x{rs1} = {rs1:05b}
+funct3    [14:12] = {funct3:03b}
+imm[4:0]  [11:7]  = {imm_4_0:05b}
+opcode    [6:0]   = {opcode:07b}
+
+Inmediato completo:
+{imm_bits:012b} = {imm}
+
+Rol de los campos:
+imm:    desplazamiento con signo respecto al registro base x{rs1}.
+rs2:    registro fuente que contiene el dato que se almacena en memoria (x{rs2}).
+rs1:    registro base utilizado para calcular la dirección de memoria (x{rs1}).
+funct3: indica el tamaño del dato que se almacena.
+opcode: identifica la instrucción como una operación de almacenamiento.
+
+Dirección efectiva:
+Regs[x{rs1}] + ({imm})
+
+Binario completo:
+{binario_completo}
+"""
+
+        return explicacion.strip()
+
+
+    
 
     raise NotImplementedError(
         f"Explicación del formato {info['formato']} todavía no implementada"
