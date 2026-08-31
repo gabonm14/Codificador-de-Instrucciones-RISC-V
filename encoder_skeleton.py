@@ -85,6 +85,18 @@ INSTRUCCIONES = {
         "formato": "S",
         "opcode": 0b0100011,
         "funct3": 0b000
+    },
+
+    "beq": {
+        "formato": "B",
+        "opcode": 0b1100011,
+        "funct3": 0b000
+    },
+
+    "bne": {
+        "formato": "B",
+        "opcode": 0b1100011,
+        "funct3": 0b001
     }
     
  
@@ -157,6 +169,21 @@ def encode_immediate(value: int, bits: int) -> int:
         )
 
     return value & ((1 << bits) - 1)
+
+def encode_branch_immediate(value: int) -> int:
+    """
+    Valida y codifica el desplazamiento de una instrucción tipo B.
+
+    El desplazamiento debe ser par porque el bit 0 del inmediato
+    no se almacena en la instrucción.
+    """
+
+    if value % 2 != 0:
+        raise ValueError(
+            f"El desplazamiento de un branch debe ser múltiplo de 2: {value}"
+        )
+
+    return encode_immediate(value, 13)
 
 
 
@@ -299,6 +326,48 @@ def encode_instruction(instruction: str) -> int:
             | (rs1 << 15)
             | (funct3 << 12)
             | (imm_4_0 << 7)
+            | opcode
+        )
+
+        return word
+
+    if info["formato"] == "B":
+
+        if len(partes) != 4:
+            raise ValueError(
+                f"Formato inválido para {mnemonico}. "
+                f"Use: {mnemonico} rs1, rs2, offset"
+            )
+
+        rs1 = parse_register(partes[1])
+        rs2 = parse_register(partes[2])
+
+        try:
+            imm = int(partes[3])
+        except ValueError:
+            raise ValueError(
+                f"Desplazamiento inválido: {partes[3]}"
+            )
+
+        opcode = info["opcode"]
+        funct3 = info["funct3"]
+
+        imm_bits = encode_branch_immediate(imm)
+
+        # Extraer los diferentes pedazos del inmediato.
+        imm_12 = (imm_bits >> 12) & 0b1
+        imm_10_5 = (imm_bits >> 5) & 0b111111
+        imm_4_1 = (imm_bits >> 1) & 0b1111
+        imm_11 = (imm_bits >> 11) & 0b1
+
+        word = (
+            (imm_12 << 31)
+            | (imm_10_5 << 25)
+            | (rs2 << 20)
+            | (rs1 << 15)
+            | (funct3 << 12)
+            | (imm_4_1 << 8)
+            | (imm_11 << 7)
             | opcode
         )
 
@@ -478,6 +547,164 @@ opcode: identifica la instrucción como una operación de almacenamiento.
 
 Dirección efectiva:
 Regs[x{rs1}] + ({imm})
+
+Binario completo:
+{binario_completo}
+"""
+
+        return explicacion.strip()
+
+    if info["formato"] == "B":
+
+        rs1 = parse_register(partes[1])
+        rs2 = parse_register(partes[2])
+
+        try:
+            imm = int(partes[3])
+        except ValueError:
+            raise ValueError(
+                f"Desplazamiento inválido: {partes[3]}"
+            )
+
+        opcode = info["opcode"]
+        funct3 = info["funct3"]
+
+        imm_bits = encode_branch_immediate(imm)
+
+        imm_12 = (imm_bits >> 12) & 0b1
+        imm_10_5 = (imm_bits >> 5) & 0b111111
+        imm_4_1 = (imm_bits >> 1) & 0b1111
+        imm_11 = (imm_bits >> 11) & 0b1
+
+        binario_completo = f"{word:032b}"
+
+        if mnemonico == "beq":
+            condicion = f"Regs[x{rs1}] == Regs[x{rs2}]"
+        else:
+            condicion = f"Regs[x{rs1}] != Regs[x{rs2}]"
+
+        explicacion = f"""
+Instrucción: {instruction}
+Formato: B
+
+Bits:
+31 30    25 24   20 19   15 14 12 11   8 7 6       0
+{imm_12:01b}  {imm_10_5:06b}   {rs2:05b}   {rs1:05b}   {funct3:03b}   {imm_4_1:04b}  {imm_11:01b} {opcode:07b}
+12  10:5      rs2     rs1    funct3 4:1   11 opcode
+
+Campos:
+imm[12]   [31]    = {imm_12:b}
+imm[10:5] [30:25] = {imm_10_5:06b}
+rs2       [24:20] = x{rs2} = {rs2:05b}
+rs1       [19:15] = x{rs1} = {rs1:05b}
+funct3    [14:12] = {funct3:03b}
+imm[4:1]  [11:8]  = {imm_4_1:04b}
+imm[11]   [7]     = {imm_11:b}
+opcode    [6:0]   = {opcode:07b}
+
+Inmediato:
+{imm_bits:013b} = {imm}
+
+Rol de los campos:
+rs1:    primer registro utilizado en la comparación (x{rs1}).
+rs2:    segundo registro utilizado en la comparación (x{rs2}).
+funct3: identifica la condición específica del branch.
+imm:    desplazamiento con signo relativo al PC.
+opcode: identifica la instrucción como un branch condicional.
+
+Condición:
+{condicion}
+
+Si la condición se cumple:
+PC = PC + ({imm})
+
+El bit imm[0] no se almacena porque el desplazamiento es múltiplo de 2.
+
+Binario completo:
+{binario_completo}
+"""
+
+        return explicacion.strip()
+
+
+    raise NotImplementedError(
+        f"Explicación del formato {info['formato']} todavía no implementada"
+    )
+
+
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(f'Uso: {sys.argv[0]} "<instruccion>"', file=sys.stderr)
+        print(f'Ejemplo: {sys.argv[0]} "add x5, x6, x7"', file=sys.stderr)
+        sys.exit(2)
+
+    instruction = sys.argv[1]
+    word = encode_instruction(instruction) & 0xFFFFFFFF
+
+    print(explain_instruction(instruction, word))
+
+    # No modificar el formato de la siguiente línea: la especificación la
+            imm = int(partes[3])
+        except ValueError:
+            raise ValueError(
+                f"Desplazamiento inválido: {partes[3]}"
+            )
+
+        opcode = info["opcode"]
+        funct3 = info["funct3"]
+
+        imm_bits = encode_branch_immediate(imm)
+
+        imm_12 = (imm_bits >> 12) & 0b1
+        imm_10_5 = (imm_bits >> 5) & 0b111111
+        imm_4_1 = (imm_bits >> 1) & 0b1111
+        imm_11 = (imm_bits >> 11) & 0b1
+
+        binario_completo = f"{word:032b}"
+
+        if mnemonico == "beq":
+            condicion = f"Regs[x{rs1}] == Regs[x{rs2}]"
+        else:
+            condicion = f"Regs[x{rs1}] != Regs[x{rs2}]"
+
+        explicacion = f"""
+Instrucción: {instruction}
+Formato: B
+
+Bits:
+31 30    25 24   20 19   15 14 12 11   8 7 6       0
+{imm_12:01b}  {imm_10_5:06b}   {rs2:05b}   {rs1:05b}   {funct3:03b}   {imm_4_1:04b}  {imm_11:01b} {opcode:07b}
+12  10:5      rs2     rs1    funct3 4:1   11 opcode
+
+Campos:
+imm[12]   [31]    = {imm_12:b}
+imm[10:5] [30:25] = {imm_10_5:06b}
+rs2       [24:20] = x{rs2} = {rs2:05b}
+rs1       [19:15] = x{rs1} = {rs1:05b}
+funct3    [14:12] = {funct3:03b}
+imm[4:1]  [11:8]  = {imm_4_1:04b}
+imm[11]   [7]     = {imm_11:b}
+opcode    [6:0]   = {opcode:07b}
+
+Inmediato:
+{imm_bits:013b} = {imm}
+
+Rol de los campos:
+rs1:    primer registro utilizado en la comparación (x{rs1}).
+rs2:    segundo registro utilizado en la comparación (x{rs2}).
+funct3: identifica la condición específica del branch.
+imm:    desplazamiento con signo relativo al PC.
+opcode: identifica la instrucción como un branch condicional.
+
+Condición:
+{condicion}
+
+Si la condición se cumple:
+PC = PC + ({imm})
+
+El bit imm[0] no se almacena porque el desplazamiento es múltiplo de 2.
 
 Binario completo:
 {binario_completo}
