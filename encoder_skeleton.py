@@ -45,7 +45,37 @@ INSTRUCCIONES = {
         "opcode": 0b0110011,
         "funct3": 0b110,
         "funct7": 0b0000000
+    },
+
+        "addi": {
+        "formato": "I",
+        "tipo": "aritmetica",
+        "opcode": 0b0010011,
+        "funct3": 0b000
+    },
+
+    "andi": {
+        "formato": "I",
+        "tipo": "aritmetica",
+        "opcode": 0b0010011,
+        "funct3": 0b111
+    },
+
+    "lw": {
+        "formato": "I",
+        "tipo": "carga",
+        "opcode": 0b0000011,
+        "funct3": 0b010
+    },
+
+    "lb": {
+        "formato": "I",
+        "tipo": "carga",
+        "opcode": 0b0000011,
+        "funct3": 0b000
     }
+    
+ 
 }
 
 def parse_register(registro: str) -> int:
@@ -68,6 +98,53 @@ def parse_register(registro: str) -> int:
         raise ValueError(f"Registro fuera de rango: {registro}")
 
     return numero
+
+def parse_memory_operand(operand: str):
+    """
+    Convierte un operando como '8(x6)' en:
+    offset = 8
+    base = x6
+    """
+
+    operand = operand.replace(" ", "")
+
+    if "(" not in operand or not operand.endswith(")"):
+        raise ValueError(
+            f"Operando de memoria inválido: {operand}"
+        )
+
+    offset_text, registro_text = operand.split("(", 1)
+
+    registro_text = registro_text[:-1]
+
+    try:
+        offset = int(offset_text)
+    except ValueError:
+        raise ValueError(
+            f"Desplazamiento inválido: {offset_text}"
+        )
+
+    registro = parse_register(registro_text)
+
+    return offset, registro
+
+
+def encode_immediate(value: int, bits: int) -> int:
+    """
+    Verifica que un inmediato con signo pueda representarse
+    con la cantidad indicada de bits y retorna su representación
+    binaria como entero positivo.
+    """
+
+    minimo = -(1 << (bits - 1))
+    maximo = (1 << (bits - 1)) - 1
+
+    if value < minimo or value > maximo:
+        raise ValueError(
+            f"Inmediato fuera de rango para {bits} bits: {value}"
+        )
+
+    return value & ((1 << bits) - 1)
 
 
 
@@ -123,6 +200,59 @@ def encode_instruction(instruction: str) -> int:
 
         return word
 
+    if info["formato"] == "I":
+
+            opcode = info["opcode"]
+            funct3 = info["funct3"]
+
+            # I aritmético: addi rd, rs1, imm
+            if info["tipo"] == "aritmetica":
+
+                if len(partes) != 4:
+                    raise ValueError(
+                        f"Formato inválido para {mnemonico}. "
+                        f"Use: {mnemonico} rd, rs1, imm"
+                    )
+
+                rd = parse_register(partes[1])
+                rs1 = parse_register(partes[2])
+
+                try:
+                    imm = int(partes[3])
+                except ValueError:
+                    raise ValueError(
+                        f"Inmediato inválido: {partes[3]}"
+                    )
+
+            # I de carga: lw rd, offset(rs1)
+            elif info["tipo"] == "carga":
+
+                if len(partes) < 3:
+                    raise ValueError(
+                        f"Formato inválido para {mnemonico}. "
+                        f"Use: {mnemonico} rd, offset(rs1)"
+                    )
+
+                rd = parse_register(partes[1])
+
+                # Esto permite incluso escribir:
+                # lw x5, 8( x6 )
+                operando_memoria = "".join(partes[2:])
+
+                imm, rs1 = parse_memory_operand(operando_memoria)
+
+            imm_bits = encode_immediate(imm, 12)
+
+            word = (
+                (imm_bits << 20)
+                | (rs1 << 15)
+                | (funct3 << 12)
+                | (rd << 7)
+                | opcode
+            )
+
+            return word
+
     raise NotImplementedError(
         f"Formato {info['formato']} todavía no implementado"
     )
@@ -155,6 +285,8 @@ def explain_instruction(instruction: str, word: int) -> str:
         binario_completo = f"{word:032b}"
 
         explicacion = f"""
+
+        
 Instrucción: {instruction}
 Formato: R
 
@@ -175,11 +307,84 @@ Binario completo:
 {binario_completo}
 """
 
+        explicacion += f"""
+
+Rol de los campos:
+funct7: complementa a funct3 para identificar la operación exacta.
+rs2:    segundo registro fuente (x{rs2}).
+rs1:    primer registro fuente (x{rs1}).
+funct3: identifica la operación dentro del opcode.
+rd:     registro destino donde se guarda el resultado (x{rd}).
+opcode: identifica la categoría principal de la instrucción.
+"""
+
         return explicacion.strip()
+
+
+    if info["formato"] == "I":
+
+            opcode = info["opcode"]
+            funct3 = info["funct3"]
+
+            if info["tipo"] == "aritmetica":
+
+                rd = parse_register(partes[1])
+                rs1 = parse_register(partes[2])
+                imm = int(partes[3])
+
+                significado_imm = (
+                    f"constante con signo utilizada por {mnemonico}"
+                )
+
+            elif info["tipo"] == "carga":
+
+                rd = parse_register(partes[1])
+
+                operando_memoria = "".join(partes[2:])
+                imm, rs1 = parse_memory_operand(operando_memoria)
+
+                significado_imm = (
+                    f"desplazamiento respecto al registro base x{rs1}"
+                )
+
+            imm_bits = encode_immediate(imm, 12)
+
+            binario_completo = f"{word:032b}"
+
+            explicacion = f"""
+    Instrucción: {instruction}
+    Formato: I
+
+    Bits:
+    31             20 19   15 14 12 11    7 6       0
+    {imm_bits:012b}   {rs1:05b}   {funct3:03b}   {rd:05b}   {opcode:07b}
+    imm[11:0]       rs1    funct3    rd     opcode
+
+    Campos:
+    imm    [31:20] = {imm_bits:012b} = {imm}
+    rs1    [19:15] = x{rs1} = {rs1:05b}
+    funct3 [14:12] = {funct3:03b}
+    rd     [11:7]  = x{rd} = {rd:05b}
+    opcode [6:0]   = {opcode:07b}
+
+    Rol de los campos:
+    imm:    {significado_imm}.
+    rs1:    registro fuente o registro base (x{rs1}).
+    funct3: identifica la operación específica dentro del opcode.
+    rd:     registro destino donde se almacena el resultado (x{rd}).
+    opcode: identifica la categoría principal de la instrucción.
+
+    Binario completo:
+    {binario_completo}
+    """
+
+            return explicacion.strip()
 
     raise NotImplementedError(
         f"Explicación del formato {info['formato']} todavía no implementada"
     )
+
+
 
 
 def main():
@@ -200,3 +405,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
