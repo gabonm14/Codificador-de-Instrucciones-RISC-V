@@ -1,0 +1,231 @@
+VALIDACIÓN CODIFICADOR RISC-V
+=======================================================
+Fecha: 2026-08-31 22:48:40
+
+Comparación: modelo propio vs. GNU RISC-V objdump
+=======================================================
+
+[ADD-1] normal
+Instrucción: add x5, x6, x7
+Modelo:      0x007302b3
+Objdump:     0x007302b3
+Resultado:   COINCIDE
+
+[ADD-2] registro x0
+Instrucción: add x0, x12, x9
+Modelo:      0x00960033
+Objdump:     0x00960033
+Resultado:   COINCIDE
+
+[ADD-3] registro x31
+Instrucción: add x31, x31, x1
+Modelo:      0x001f8fb3
+Objdump:     0x001f8fb3
+Resultado:   COINCIDE
+
+[SUB-1] normal
+Instrucción: sub x8, x15, x3
+Modelo:      0x40378433
+Objdump:     0x40378433
+Resultado:   COINCIDE
+
+[SUB-2] registro x0
+Instrucción: sub x0, x10, x4
+Modelo:      0x40450033
+Objdump:     0x40450033
+Resultado:   COINCIDE
+
+[SUB-3] registro x31
+Instrucción: sub x31, x31, x30
+Modelo:      0x41ef8fb3
+Objdump:     0x41ef8fb3
+Resultado:   COINCIDE
+
+[AND-1] normal
+Instrucción: and x9, x14, x5
+Modelo:      0x005774b3
+Objdump:     0x005774b3
+Resultado:   COINCIDE
+
+[AND-2] registro x0
+Instrucción: and x0, x7, x8
+Modelo:      0x0083f033
+Objdump:     0x0083f033
+Resultado:   COINCIDE
+
+[AND-3] registro x31
+Instrucción: and x31, x31, x2
+Modelo:      0x002fffb3
+Objdump:     0x002fffb3
+Resultado:   COINCIDE
+
+[OR-1] normal
+Instrucción: or x11, x4, x13
+Modelo:      0x00d265b3
+Objdump:     0x00d265b3
+Resultado:   COINCIDE
+
+[OR-2] registro x0
+Instrucción: or x0, x6, x9
+Modelo:      0x00936033
+Objdump:     0x00936033
+Resultado:   COINCIDE
+
+[OR-3] registro x31
+Instrucción: or x31, x30, x31
+Modelo:      0x01ff6fb3
+Objdump:     0x01ff6fb3
+Resultado:   COINCIDE
+
+[ADDI-1] inmediato positivo
+Instrucción: addi x5, x6, 123
+Modelo:      0x07b30293
+Objdump:     0x07b30293
+Resultado:   COINCIDE
+
+[ADDI-2] inmediato negativo
+Instrucción: addi x10, x11, -37
+Modelo:      0xfdb58513
+Objdump:     0xfdb58513
+Resultado:   COINCIDE
+
+[ADDI-3] inmediato maximo
+Instrucción: addi x31, x0, 2047
+Modelo:      0x7ff00f93
+Objdump:     0x7ff00f93
+Resultado:   COINCIDE
+
+[ANDI-1] inmediato positivo
+Instrucción: andi x8, x9, 85
+Modelo:      0x0554f413
+Objdump:     0x0554f413
+Resultado:   COINCIDE
+
+[ANDI-2] inmediato negativo
+Instrucción: andi x3, x4, -16
+Modelo:      0xff027193
+Objdump:     0xff027193
+Resultado:   COINCIDE
+
+[ANDI-3] inmediato minimo
+Instrucción: andi x31, x0, -2048
+Modelo:      0x80007f93
+Objdump:     0x80007f93
+Resultado:   COINCIDE
+
+[LW-1] offset positivo
+Instrucción: lw x5, 16(x6)
+Modelo:      0x01032283
+Objdump:     0x01032283
+Resultado:   COINCIDE
+
+[LW-2] offset negativo
+Instrucción: lw x7, -20(x8)
+Modelo:      0xfec42383
+Objdump:     0xfec42383
+Resultado:   COINCIDE
+
+[LW-3] offset minimo
+Instrucción: lw x31, -2048(x0)
+Modelo:      0x80002f83
+Objdump:     0x80002f83
+Resultado:   COINCIDE
+
+[LB-1] offset positivo
+Instrucción: lb x10, 127(x11)
+Modelo:      0x07f58503
+Objdump:     0x07f58503
+Resultado:   COINCIDE
+
+[LB-2] offset negativo
+Instrucción: lb x12, -100(x13)
+Modelo:      0xf9c68603
+Objdump:     0xf9c68603
+Resultado:   COINCIDE
+
+[LB-3] offset maximo
+Instrucción: lb x31, 2047(x0)
+Modelo:      0x7ff00f83
+Objdump:     0x7ff00f83
+Resultado:   COINCIDE
+
+[SW-1] offset positivo
+Instrucción: sw x5, 20(x6)
+Modelo:      0x00532a23
+Objdump:     0x00532a23
+Resultado:   COINCIDE
+
+[SW-2] offset negativo
+Instrucción: sw x10, -32(x11)
+Modelo:      0xfea5a023
+Objdump:     0xfea5a023
+Resultado:   COINCIDE
+
+[SW-3] offset minimo
+Instrucción: sw x31, -2048(x0)
+Modelo:      0x81f02023
+Objdump:     0x81f02023
+Resultado:   COINCIDE
+
+[SB-1] offset positivo
+Instrucción: sb x7, 100(x8)
+Modelo:      0x06740223
+Objdump:     0x06740223
+Resultado:   COINCIDE
+
+[SB-2] offset negativo
+Instrucción: sb x12, -75(x13)
+Modelo:      0xfac68aa3
+Objdump:     0xfac68aa3
+Resultado:   COINCIDE
+
+[SB-3] offset maximo
+Instrucción: sb x31, 2047(x0)
+Modelo:      0x7ff00fa3
+Objdump:     0x7ff00fa3
+Resultado:   COINCIDE
+
+[BEQ-1] desplazamiento positivo
+Instrucción: beq x1, x2, 16
+Modelo:      0x00208863
+Objdump:     0x00208863
+Resultado:   COINCIDE
+
+[BEQ-2] desplazamiento negativo
+Instrucción: beq x31, x0, -16
+Modelo:      0xfe0f88e3
+Objdump:     0xfe0f88e3
+Resultado:   COINCIDE
+
+[BEQ-3] desplazamiento cero
+Instrucción: beq x0, x0, 0
+Modelo:      0x00000063
+Objdump:     0x00000063
+Resultado:   COINCIDE
+
+[BNE-1] desplazamiento positivo
+Instrucción: bne x5, x6, 12
+Modelo:      0x00629663
+Objdump:     0x00629663
+Resultado:   COINCIDE
+
+[BNE-2] desplazamiento negativo
+Instrucción: bne x31, x1, -12
+Modelo:      0xfe1f9ae3
+Objdump:     0xfe1f9ae3
+Resultado:   COINCIDE
+
+[BNE-3] desplazamiento cero
+Instrucción: bne x0, x0, 0
+Modelo:      0x00001063
+Objdump:     0x00001063
+Resultado:   COINCIDE
+
+=======================================================
+RESUMEN
+=======================================================
+Casos ejecutados: 36
+Coincidencias:     36
+Errores:            0
+
+RESULTADO FINAL: 36/36 CORRECTOS

@@ -1,0 +1,73 @@
+# ID | Escenario | Instruccion
+
+# =========================
+# FORMATO R
+# =========================
+
+ADD-1 | normal | add x5, x6, x7
+ADD-2 | registro x0 | add x0, x12, x9
+ADD-3 | registro x31 | add x31, x31, x1
+
+SUB-1 | normal | sub x8, x15, x3
+SUB-2 | registro x0 | sub x0, x10, x4
+SUB-3 | registro x31 | sub x31, x31, x30
+
+AND-1 | normal | and x9, x14, x5
+AND-2 | registro x0 | and x0, x7, x8
+AND-3 | registro x31 | and x31, x31, x2
+
+OR-1 | normal | or x11, x4, x13
+OR-2 | registro x0 | or x0, x6, x9
+OR-3 | registro x31 | or x31, x30, x31
+
+
+# =========================
+# FORMATO I - ARITMETICA
+# =========================
+
+ADDI-1 | inmediato positivo | addi x5, x6, 123
+ADDI-2 | inmediato negativo | addi x10, x11, -37
+ADDI-3 | inmediato maximo | addi x31, x0, 2047
+
+ANDI-1 | inmediato positivo | andi x8, x9, 85
+ANDI-2 | inmediato negativo | andi x3, x4, -16
+ANDI-3 | inmediato minimo | andi x31, x0, -2048
+
+
+# =========================
+# FORMATO I - LOAD
+# =========================
+
+LW-1 | offset positivo | lw x5, 16(x6)
+LW-2 | offset negativo | lw x7, -20(x8)
+LW-3 | offset minimo | lw x31, -2048(x0)
+
+LB-1 | offset positivo | lb x10, 127(x11)
+LB-2 | offset negativo | lb x12, -100(x13)
+LB-3 | offset maximo | lb x31, 2047(x0)
+
+
+# =========================
+# FORMATO S
+# =========================
+
+SW-1 | offset positivo | sw x5, 20(x6)
+SW-2 | offset negativo | sw x10, -32(x11)
+SW-3 | offset minimo | sw x31, -2048(x0)
+
+SB-1 | offset positivo | sb x7, 100(x8)
+SB-2 | offset negativo | sb x12, -75(x13)
+SB-3 | offset maximo | sb x31, 2047(x0)
+
+
+# =========================
+# FORMATO B
+# =========================
+
+BEQ-1 | desplazamiento positivo | beq x1, x2, 16
+BEQ-2 | desplazamiento negativo | beq x31, x0, -16
+BEQ-3 | desplazamiento cero | beq x0, x0, 0
+
+BNE-1 | desplazamiento positivo | bne x5, x6, 12
+BNE-2 | desplazamiento negativo | bne x31, x1, -12
+BNE-3 | desplazamiento cero | bne x0, x0, 0
